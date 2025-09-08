@@ -1,4 +1,4 @@
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from power_bar import PowerBar
 
 app = QtWidgets.QApplication([])
