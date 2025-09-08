@@ -1,5 +1,5 @@
-from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import Qt
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 
 class _Bar(QtWidgets.QWidget):
@@ -38,35 +38,31 @@ class _Bar(QtWidgets.QWidget):
         rect = QtCore.QRect(0, 0, painter.device().width(), painter.device().height())
         painter.fillRect(rect, brush)
 
-       
         parent = self.parent()
         vmin, vmax = parent.minimum(), parent.maximum()
         value = parent.value()
 
-       
         d_height = painter.device().height() - (self._padding * 2)
         d_width = painter.device().width() - (self._padding * 2)
 
-       
-        step_size = d_height / self.n_steps
-        bar_height = step_size * self._bar_solid_percent
-        bar_spacer = step_size * (1 - self._bar_solid_percent) / 2
+        step_size = d_width / self.n_steps
+        radius = min(step_size * self._bar_solid_percent, d_height) / 2
 
-       
         pc = (value - vmin) / (vmax - vmin)
         n_steps_to_draw = int(pc * self.n_steps)
 
         for n in range(n_steps_to_draw):
             brush.setColor(QtGui.QColor(self.steps[n]))
-            rect = QtCore.QRect(
-                int(self._padding),
-                int(self._padding + d_height - ((1 + n) * step_size) + bar_spacer),
-                int(d_width),
-                int(bar_height)
-            )
-            painter.fillRect(rect, brush)
+            cx = int(self._padding + n * step_size + step_size / 2)
+            cy = int(self._padding + d_height / 2)
+            painter.setBrush(brush)
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.drawEllipse(QtCore.QPoint(cx, cy), int(radius), int(radius))
 
         painter.end()
+
+    def sizeHint(self):
+        return QtCore.QSize(200, 60)
 
     def sizeHint(self):
         return QtCore.QSize(40, 120)
@@ -93,27 +89,33 @@ class _Bar(QtWidgets.QWidget):
 
 
 class PowerBar(QtWidgets.QWidget):
-    
+   
     colorChanged = QtCore.pyqtSignal()
 
-    def __init__(self, steps=5, *args, **kwargs):
+    def __init__(self, steps=10, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        colors = []
+        for i in range(steps):
+            r = int(255 - (255 * i / (steps - 1)))
+            g = int(255 * i / (steps - 1))
+            b = 0
+            colors.append(QtGui.QColor(r, g, b).name())
+
         layout = QtWidgets.QVBoxLayout()
-        self._bar = _Bar(steps)
+        self._bar = _Bar(colors) 
         layout.addWidget(self._bar)
 
-        
         self._dial = QtWidgets.QDial()
         self._dial.setNotchesVisible(True)
         self._dial.setWrapping(False)
         self._dial.valueChanged.connect(self._bar._trigger_refresh)
 
-       
         self._bar.clickedValue.connect(self._dial.setValue)
 
         layout.addWidget(self._dial)
         self.setLayout(layout)
+
 
     def __getattr__(self, name):
         if name in self.__dict__:
