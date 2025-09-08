@@ -1,10 +1,13 @@
-from PyQt6.QtCore import (
-    Qt, QSize, QPoint, QPointF, QRectF,
+from PyQt5.QtCore import (
+    Qt, QSize, QPoint, QPointF, QRectF, QRect,
     QEasingCurve, QPropertyAnimation, QSequentialAnimationGroup,
-    pyqtSlot, pyqtProperty)
-
-from PyQt6.QtWidgets import QCheckBox
-from PyQt6.QtGui import QColor, QBrush, QPaintEvent, QPen, QPainter
+    pyqtSlot, pyqtProperty
+)
+from PyQt5.QtWidgets import (
+    QCheckBox, QWidget, QVBoxLayout, QLabel, QPushButton, QGraphicsOpacityEffect, QApplication
+)
+from PyQt5.QtGui import QColor, QBrush, QPaintEvent, QPen, QPainter
+import sys
 
 
 class AnimatedToggle(QCheckBox):
@@ -22,8 +25,6 @@ class AnimatedToggle(QCheckBox):
         ):
         super().__init__(parent)
 
-        # Save our properties on the object via self, so we can access them later
-        # in the paintEvent.
         self._bar_brush = QBrush(bar_color)
         self._bar_checked_brush = QBrush(QColor(checked_color).lighter())
 
@@ -33,7 +34,6 @@ class AnimatedToggle(QCheckBox):
         self._pulse_unchecked_animation = QBrush(QColor(pulse_unchecked_color))
         self._pulse_checked_animation = QBrush(QColor(pulse_checked_color))
 
-        # Setup the rest of the widget.
         self.setContentsMargins(8, 0, 8, 0)
         self._handle_position = 0
 
@@ -85,7 +85,6 @@ class AnimatedToggle(QCheckBox):
         barRect.moveCenter(QPointF(contRect.center()))
         rounding = barRect.height() / 2
 
-        # the handle will move along this line
         trailLength = contRect.width() - 2 * handleRadius
 
         xPos = contRect.x() + handleRadius + trailLength * self._handle_position
@@ -136,3 +135,61 @@ class AnimatedToggle(QCheckBox):
     def pulse_radius(self, pos):
         self._pulse_radius = pos
         self.update()
+
+class AnimatedDemo(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setFixedSize(400, 300)
+        self.setWindowTitle("Animated Demo")
+
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignCenter)
+
+        self.mainToggle = AnimatedToggle()
+        self.secondaryToggle = AnimatedToggle(
+            checked_color="#FFB000",
+            pulse_checked_color="#44FFB000"
+        )
+        self.mainToggle.setFixedSize(self.mainToggle.sizeHint())
+        self.secondaryToggle.setFixedSize(self.secondaryToggle.sizeHint())
+
+        layout.addWidget(QLabel("Main Toggle"))
+        layout.addWidget(self.mainToggle)
+
+        layout.addWidget(QLabel("Secondary Toggle"))
+        layout.addWidget(self.secondaryToggle)
+
+        self.mainToggle.stateChanged.connect(self.secondaryToggle.setChecked)
+
+        self.btn = QPushButton("Kliknij mnie")
+        layout.addWidget(self.btn)
+
+        self.anim_btn = QPropertyAnimation(self.btn, b"geometry")
+        self.anim_btn.setDuration(1000)
+        self.anim_btn.setStartValue(QRect(0, 0, 120, 40))
+        self.anim_btn.setEndValue(QRect(150, 0, 120, 40))
+
+        self.lbl = QLabel("Animowany napis")
+        self.lbl.setStyleSheet("color: blue;")
+        layout.addWidget(self.lbl)
+
+        effect = QGraphicsOpacityEffect(self.lbl)
+        self.lbl.setGraphicsEffect(effect)
+
+        self.anim_lbl = QPropertyAnimation(effect, b"opacity")
+        self.anim_lbl.setDuration(1500)
+        self.anim_lbl.setStartValue(0.0)
+        self.anim_lbl.setEndValue(1.0)
+
+        self.btn.clicked.connect(self.start_anims)
+
+    def start_anims(self):
+        self.anim_btn.start()
+        self.anim_lbl.start()
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = AnimatedDemo()
+    w.show()
+    sys.exit(app.exec_())
